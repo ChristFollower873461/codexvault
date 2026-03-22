@@ -1,0 +1,62 @@
+{
+  "format": "codexvault.openclaw.bundle",
+  "version": 1,
+  "generatedAt": "2026-03-21T20:00:00Z",
+  "selectionPolicy": {
+    "statusPriority": ["active", "old", "revoked"],
+    "dedupe": "one entry per OpenClaw env var name",
+    "revokedBehavior": "excluded from env output"
+  },
+  "env": {
+    "OPENAI_API_KEY": "sk-redacted-openai-active",
+    "ANTHROPIC_API_KEY": "sk-ant-redacted-old"
+  },
+  "providers": [
+    {
+      "provider": "anthropic",
+      "envVarName": "ANTHROPIC_API_KEY",
+      "entryId": "entry-anthropic-old",
+      "entryName": "Anthropic Research",
+      "status": "old",
+      "environment": "research",
+      "modelFamily": "claude-3.7",
+      "models": ["claude-3-7-sonnet-latest"],
+      "tags": ["research"],
+      "agentAccessTags": ["researcher"],
+      "usedOldFallback": true
+    },
+    {
+      "provider": "openai",
+      "envVarName": "OPENAI_API_KEY",
+      "entryId": "entry-openai-active",
+      "entryName": "OpenAI Primary",
+      "status": "active",
+      "environment": "production",
+      "modelFamily": "gpt-4.1",
+      "models": ["gpt-4.1", "gpt-4.1-mini"],
+      "tags": ["prod", "writer"],
+      "agentAccessTags": ["writer", "reviewer"],
+      "usedOldFallback": false
+    }
+  ],
+  "skipped": [
+    {
+      "envVarName": "OPENAI_API_KEY",
+      "reason": "shadowedByHigherPriorityEntry",
+      "entryId": "entry-openai-old",
+      "entryName": "OpenAI Legacy",
+      "provider": "OpenAI",
+      "status": "old",
+      "environment": "production"
+    },
+    {
+      "envVarName": "GROQ_API_KEY",
+      "reason": "revoked",
+      "entryId": "entry-groq-revoked",
+      "entryName": "Groq Revoked",
+      "provider": "Groq",
+      "status": "revoked",
+      "environment": "staging"
+    }
+  ]
+}

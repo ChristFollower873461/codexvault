@@ -1,0 +1,11 @@
+[
+  {
+    "provider": "OpenAI",
+    "envVarName": "OPENAI_API_KEY",
+    "apiKey": "sk-redacted-openai",
+    "environment": "production",
+    "modelFamily": "gpt-4.1",
+    "models": ["gpt-4.1", "gpt-4.1-mini"],
+    "status": "active"
+  }
+]

@@ -1,0 +1,23 @@
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
+  color: #ecf6f8;
+  background:
+    radial-gradient(circle at top left, rgba(127, 240, 200, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(34, 97, 120, 0.22), transparent 38%),
+    linear-gradient(180deg, #071015 0%, #09141a 45%, #070d12 100%);
+}
+
+a {
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="vault-glow" x1="14" x2="52" y1="12" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7ff0c8" />
+      <stop offset="1" stop-color="#14c98d" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#081015" />
+  <path
+    d="M20 17.5h24c5.247 0 9.5 4.253 9.5 9.5v14c0 5.247-4.253 9.5-9.5 9.5H20c-5.247 0-9.5-4.253-9.5-9.5V27c0-5.247 4.253-9.5 9.5-9.5Z"
+    fill="#10191f"
+    stroke="url(#vault-glow)"
+    stroke-width="3"
+  />
+  <circle cx="32" cy="34" r="7.5" stroke="#ECF6F8" stroke-width="3" />
+  <path d="M32 33.5v8" stroke="#ECF6F8" stroke-linecap="round" stroke-width="3" />
+  <path
+    d="M23 18v-2.5C23 9.977 27.477 5.5 33 5.5s10 4.477 10 10V18"
+    stroke="#8BA0AB"
+    stroke-linecap="round"
+    stroke-width="3"
+  />
+</svg>

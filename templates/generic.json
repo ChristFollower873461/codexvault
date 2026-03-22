@@ -1,0 +1,16 @@
+[
+  {
+    "id": "entry-openai-primary",
+    "name": "OpenAI Primary",
+    "provider": "OpenAI",
+    "envVarName": "OPENAI_API_KEY",
+    "secretValue": "sk-redacted-openai",
+    "modelFamily": "gpt-4.1",
+    "models": ["gpt-4.1", "gpt-4.1-mini"],
+    "tags": ["prod", "writer"],
+    "notes": "Primary operator key for production writing agents.",
+    "environment": "production",
+    "agentAccessTags": ["writer", "reviewer"],
+    "status": "active"
+  }
+]

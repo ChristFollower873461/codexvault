@@ -1,0 +1,284 @@
+name: CodexVault Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_channel:
+        description: "Release channel"
+        required: true
+        type: choice
+        default: preview
+        options:
+          - preview
+          - partial
+          - trusted
+      windows_validation_report:
+        description: "Required for trusted releases: link or summary of manual Windows validation"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build desktop artifacts
+        run: npm run tauri:build
+
+      - name: Locate macOS artifacts
+        id: mac_artifacts
+        run: |
+          APP_PATH=$(find src-tauri/target/release/bundle/macos -maxdepth 1 -name "*.app" | head -n 1)
+          DMG_PATH=$(find src-tauri/target/release/bundle/dmg -maxdepth 1 -name "*.dmg" | head -n 1)
+          if [ -z "$APP_PATH" ] || [ -z "$DMG_PATH" ]; then
+            echo "Expected .app and .dmg artifacts were not found."
+            exit 1
+          fi
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+          echo "dmg_path=$DMG_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Sign and notarize macOS artifacts (partial/trusted channels)
+        id: mac_sign
+        if: ${{ inputs.release_channel != 'preview' }}
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.CODEXVAULT_APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.CODEXVAULT_APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.CODEXVAULT_APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.CODEXVAULT_APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.CODEXVAULT_APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.CODEXVAULT_APPLE_TEAM_ID }}
+        run: |
+          for required in APPLE_CERTIFICATE_BASE64 APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!required}" ]; then
+              echo "Missing required secret: $required"
+              exit 1
+            fi
+          done
+
+          APP_PATH="${{ steps.mac_artifacts.outputs.app_path }}"
+          DMG_PATH="${{ steps.mac_artifacts.outputs.dmg_path }}"
+          CERT_PATH="$RUNNER_TEMP/codexvault-signing.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/codexvault-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 24)"
+
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+          codesign --force --deep --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$APP_PATH"
+          codesign --force --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$DMG_PATH"
+          codesign --verify --deep --strict "$APP_PATH"
+
+          xcrun notarytool submit "$DMG_PATH" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --wait
+          xcrun stapler staple "$DMG_PATH"
+          xcrun stapler validate "$DMG_PATH"
+
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+          echo "notarized=true" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve macOS trust flags
+        id: mac_trust
+        run: |
+          if [ "${{ inputs.release_channel }}" = "preview" ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "notarized=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "notarized=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write macOS metadata
+        run: |
+          mkdir -p release-artifacts/upload/macos
+          DMG_PATH="${{ steps.mac_artifacts.outputs.dmg_path }}"
+          cp "$DMG_PATH" release-artifacts/upload/macos/
+
+          cat > release-artifacts/upload/macos/macos.json <<EOF
+          {
+            "platform": "macos",
+            "channel": "${{ inputs.release_channel }}",
+            "signed": ${{ steps.mac_trust.outputs.signed }},
+            "notarized": ${{ steps.mac_trust.outputs.notarized }},
+            "artifactName": "$(basename "$DMG_PATH")"
+          }
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codexvault-release-macos
+          path: release-artifacts/upload/macos
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build desktop artifacts
+        run: npm run tauri:build
+
+      - name: Locate Windows artifacts
+        id: win_artifacts
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem -Path "src-tauri/target/release/bundle/msi" -Filter *.msi -File | Select-Object -First 1
+          $exe = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter *.exe -File | Select-Object -First 1
+          if (-not $msi -and -not $exe) {
+            throw "Expected .msi or .exe artifacts were not found."
+          }
+          if ($msi) {
+            "msi_path=$($msi.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          }
+          if ($exe) {
+            "exe_path=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          }
+
+      - name: Sign Windows artifacts (trusted channel)
+        id: win_sign
+        if: ${{ inputs.release_channel == 'trusted' }}
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.CODEXVAULT_WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.CODEXVAULT_WINDOWS_CERTIFICATE_PASSWORD }}
+          MSI_PATH: ${{ steps.win_artifacts.outputs.msi_path }}
+          EXE_PATH: ${{ steps.win_artifacts.outputs.exe_path }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE_BASE64) {
+            throw "Missing required secret: CODEXVAULT_WINDOWS_CERTIFICATE_BASE64"
+          }
+          if (-not $env:WINDOWS_CERTIFICATE_PASSWORD) {
+            throw "Missing required secret: CODEXVAULT_WINDOWS_CERTIFICATE_PASSWORD"
+          }
+
+          $signTool = (Get-Command signtool.exe -ErrorAction SilentlyContinue).Source
+          if (-not $signTool) {
+            throw "signtool.exe was not found on the runner."
+          }
+
+          $targets = @()
+          if ($env:MSI_PATH) { $targets += $env:MSI_PATH }
+          if ($env:EXE_PATH) { $targets += $env:EXE_PATH }
+          if ($targets.Count -eq 0) {
+            throw "No signable Windows artifacts were found."
+          }
+
+          $pfxPath = Join-Path $env:RUNNER_TEMP "codexvault-signing.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
+
+          foreach ($target in $targets) {
+            & $signTool sign /fd SHA256 /f $pfxPath /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td SHA256 $target
+            if ($LASTEXITCODE -ne 0) {
+              throw "signtool sign failed for $target"
+            }
+            & $signTool verify /pa $target
+            if ($LASTEXITCODE -ne 0) {
+              throw "signtool verify failed for $target"
+            }
+          }
+
+          "signed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Resolve Windows trust flags
+        id: win_trust
+        shell: pwsh
+        run: |
+          if ("${{ inputs.release_channel }}" -eq "trusted") {
+            "signed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          }
+          else {
+            "signed=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          }
+
+      - name: Write Windows metadata
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "release-artifacts/upload/windows" -Force | Out-Null
+          $artifactNames = @()
+          if ("${{ steps.win_artifacts.outputs.msi_path }}") {
+            Copy-Item "${{ steps.win_artifacts.outputs.msi_path }}" "release-artifacts/upload/windows/" -Force
+            $artifactNames += [IO.Path]::GetFileName("${{ steps.win_artifacts.outputs.msi_path }}")
+          }
+          if ("${{ steps.win_artifacts.outputs.exe_path }}") {
+            Copy-Item "${{ steps.win_artifacts.outputs.exe_path }}" "release-artifacts/upload/windows/" -Force
+            $artifactNames += [IO.Path]::GetFileName("${{ steps.win_artifacts.outputs.exe_path }}")
+          }
+
+          $metadata = [ordered]@{
+            platform = "windows"
+            channel = "${{ inputs.release_channel }}"
+            signed = [bool]::Parse("${{ steps.win_trust.outputs.signed }}")
+            notarized = $false
+            manualValidationReport = "${{ inputs.windows_validation_report }}"
+            artifactNames = $artifactNames
+          }
+          $metadata | ConvertTo-Json -Depth 5 | Set-Content "release-artifacts/upload/windows/windows.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codexvault-release-windows
+          path: release-artifacts/upload/windows
+          if-no-files-found: error
+
+  finalize-release-truth:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: codexvault-release-*
+          path: release-artifacts/input
+          merge-multiple: true
+
+      - name: Build release truth and checksums
+        run: |
+          mkdir -p release-artifacts/output
+          node scripts/release/verify-release-truth.mjs \
+            --channel "${{ inputs.release_channel }}" \
+            --metadata-dir release-artifacts/input \
+            --windows-validation-report "${{ inputs.windows_validation_report }}" \
+            --output release-artifacts/output/release-truth.json
+          node scripts/release/generate-checksums.mjs \
+            --input-dir release-artifacts/input \
+            --output release-artifacts/output/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codexvault-release-truth
+          path: release-artifacts/output
+          if-no-files-found: error
