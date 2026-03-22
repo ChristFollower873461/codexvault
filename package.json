@@ -17,7 +17,7 @@
     "tauri:build": "tauri build",
     "tauri:smoke": "npm run build && cargo build --manifest-path src-tauri/Cargo.toml",
     "cargo:test": "cargo test --manifest-path src-tauri/Cargo.toml",
-    "demo:vault": "cargo run --manifest-path src-tauri/Cargo.toml --bin demo_vault --",
+    "demo:vault": "cargo run --manifest-path src-tauri/Cargo.toml --example demo_vault --",
     "release:verify-truth": "node scripts/release/verify-release-truth.mjs",
     "release:checksums": "node scripts/release/generate-checksums.mjs"
   },
