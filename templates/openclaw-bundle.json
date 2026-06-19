@@ -8,8 +8,8 @@
     "revokedBehavior": "excluded from env output"
   },
   "env": {
-    "OPENAI_API_KEY": "sk-redacted-openai-active",
-    "ANTHROPIC_API_KEY": "sk-ant-redacted-old"
+    "OPENAI_API_KEY": "<OPENAI_API_KEY>",
+    "ANTHROPIC_API_KEY": "<ANTHROPIC_API_KEY>"
   },
   "providers": [
     {
