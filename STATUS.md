@@ -1,8 +1,8 @@
 # Repository Status
 
 - Status: Active public utility
-- Last reviewed: 2026-04-26
-- Notes: Local-first encrypted API key vault for AI operators. Local checkout exists in the workspace.
+- Last reviewed: 2026-08-01
+- Notes: Local-first encrypted API key vault for AI operators, with a read-only hosted walkthrough that uses synthetic data and preserves the desktop security boundary.
 
 ## Cleanup Guidance
 

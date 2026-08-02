@@ -47,6 +47,7 @@ export interface RecentVault {
 }
 
 export interface AppSnapshot {
+  mode?: 'desktop' | 'demo'
   recentVaults: RecentVault[]
   session: UnlockedVaultSnapshot | null
 }
