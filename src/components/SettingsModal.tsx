@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import type { VaultSettings } from '../lib/types'
 
@@ -14,10 +14,6 @@ export function SettingsModal({
   onSave,
 }: SettingsModalProps) {
   const [draft, setDraft] = useState(settings)
-
-  useEffect(() => {
-    setDraft(settings)
-  }, [settings])
 
   function updateNumber<K extends keyof VaultSettings>(field: K, value: string) {
     const parsed = Number.parseInt(value, 10)

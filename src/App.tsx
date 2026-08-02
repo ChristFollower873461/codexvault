@@ -342,9 +342,10 @@ function App() {
   const filtersActive = hasActiveFilters(filters)
 
   const selectedEntry =
-    filteredEntries.find((entry) => entry.id === selectedEntryId) ?? null
-  const selectedEntryDetails =
-    selectedEntry ?? entries.find((entry) => entry.id === selectedEntryId) ?? null
+    filteredEntries.find((entry) => entry.id === selectedEntryId) ??
+    filteredEntries[0] ??
+    null
+  const selectedEntryDetails = selectedEntry
   const effectiveExportScope =
     exportScope === 'filtered' || !selectedEntryDetails ? 'filtered' : 'selected'
   const exportIds =
@@ -356,9 +357,30 @@ function App() {
   const exportTargetKey = `${effectiveExportScope}:${exportIds.join(',')}`
 
   function applySnapshot(nextSnapshot: AppSnapshot) {
+    setSelectedEntryId((current) => {
+      const nextEntries = nextSnapshot.session?.entries ?? []
+      return nextEntries.some((entry) => entry.id === current)
+        ? current
+        : nextEntries[0]?.id ?? null
+    })
+    setRevealedSecret(null)
+    setExportPreview(null)
+    setOpenClawReview(null)
     startTransition(() => {
       setSnapshot(nextSnapshot)
     })
+  }
+
+  function updateFilters(updater: (current: FiltersState) => FiltersState) {
+    setFilters(updater)
+    setSelectedEntryId(null)
+    setRevealedSecret(null)
+    setExportPreview(null)
+    setOpenClawReview(null)
+  }
+
+  function clearFilters() {
+    updateFilters(() => initialFilters)
   }
 
   async function scheduleClipboardClear(
@@ -405,39 +427,6 @@ function App() {
 
     return () => window.clearTimeout(timerId)
   }, [flash])
-
-  useEffect(() => {
-    if (!session) {
-      setSelectedEntryId(null)
-      setRevealedSecret(null)
-      setExportPreview(null)
-      setOpenClawReview(null)
-      return
-    }
-
-    if (filteredEntries.length === 0) {
-      setSelectedEntryId(null)
-      setRevealedSecret(null)
-      return
-    }
-
-    if (selectedEntryId && filteredEntries.some((entry) => entry.id === selectedEntryId)) {
-      return
-    }
-
-    setSelectedEntryId(filteredEntries[0].id)
-    setRevealedSecret(null)
-  }, [filteredEntries, selectedEntryId, session])
-
-  useEffect(() => {
-    if (!openClawReview) {
-      return
-    }
-
-    if (openClawReview.targetKey !== exportTargetKey) {
-      setOpenClawReview(null)
-    }
-  }, [exportTargetKey, openClawReview])
 
   useEffect(() => {
     if (!revealedSecret || !session) {
@@ -920,7 +909,7 @@ function App() {
               value={filters.search}
               onChange={(event) =>
                 startTransition(() => {
-                  setFilters((current) => ({
+                  updateFilters((current) => ({
                     ...current,
                     search: event.target.value,
                   }))
@@ -935,7 +924,7 @@ function App() {
             <select
               value={filters.provider}
               onChange={(event) =>
-                setFilters((current) => ({
+                updateFilters((current) => ({
                   ...current,
                   provider: event.target.value,
                 }))
@@ -955,7 +944,7 @@ function App() {
             <select
               value={filters.environment}
               onChange={(event) =>
-                setFilters((current) => ({
+                updateFilters((current) => ({
                   ...current,
                   environment: event.target.value,
                 }))
@@ -975,7 +964,7 @@ function App() {
             <select
               value={filters.tag}
               onChange={(event) =>
-                setFilters((current) => ({
+                updateFilters((current) => ({
                   ...current,
                   tag: event.target.value,
                 }))
@@ -995,7 +984,7 @@ function App() {
             <select
               value={filters.status}
               onChange={(event) =>
-                setFilters((current) => ({
+                updateFilters((current) => ({
                   ...current,
                   status: event.target.value as FiltersState['status'],
                 }))
@@ -1010,7 +999,7 @@ function App() {
 
           <button
             className="ghost-button"
-            onClick={() => setFilters(initialFilters)}
+            onClick={clearFilters}
           >
             Clear filters
           </button>
@@ -1065,7 +1054,7 @@ function App() {
                 No entries match the current metadata filters. Clear the filters or
                 pick a different provider, tag, or environment.
               </p>
-              <button className="secondary-button" onClick={() => setFilters(initialFilters)}>
+              <button className="secondary-button" onClick={clearFilters}>
                 Clear filters
               </button>
             </div>
@@ -1081,6 +1070,7 @@ function App() {
                     setSelectedEntryId(entry.id)
                     setRevealedSecret(null)
                     setExportPreview(null)
+                    setOpenClawReview(null)
                   }}
                 >
                   <div className="entry-card-header">
@@ -1133,7 +1123,7 @@ function App() {
                     Choose an entry from the list to inspect metadata, copy the secret,
                     or generate an export snippet.
                   </p>
-                  <button className="secondary-button" onClick={() => setFilters(initialFilters)}>
+                  <button className="secondary-button" onClick={clearFilters}>
                     Clear filters
                   </button>
                 </>
@@ -1332,6 +1322,7 @@ function App() {
                       onClick={() => {
                         setExportScope('selected')
                         setExportPreview(null)
+                        setOpenClawReview(null)
                       }}
                     >
                       Selected entry
@@ -1346,6 +1337,7 @@ function App() {
                       onClick={() => {
                         setExportScope('filtered')
                         setExportPreview(null)
+                        setOpenClawReview(null)
                       }}
                     >
                       Filtered set ({filteredEntries.length})

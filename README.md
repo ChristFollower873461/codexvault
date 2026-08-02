@@ -43,6 +43,8 @@ CodexVault uses `Tauri + React + TypeScript`.
 
 ## Current release status
 
+- Dependency baseline refreshed on 2026-08-01: Tauri `2.11.5`, current compatible React/tooling releases, zero npm audit findings, and zero RustSec vulnerabilities.
+- Pull requests and `main` now run dedicated frontend, Rust, and dependency-audit quality gates.
 - Verified locally on macOS with `npm run lint`, `npm test`, `npm run cargo:test`, `npm run tauri:smoke`, and `npm run tauri:build`.
 - Local macOS `.app` and `.dmg` packaging succeeds.
 - No signed Windows binaries are shipped.
@@ -182,6 +184,7 @@ codexvault/
 - [Manual QA checklist](./docs/manual-qa.md)
 - [Windows release validation](./docs/windows-validation.md)
 - [Release and packaging status](./docs/release.md)
+- [Dependency audit posture](./docs/dependency-audit.md)
 
 ## Scope and non-goals
 
