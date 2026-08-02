@@ -4,6 +4,8 @@ CodexVault is a local-first encrypted API key vault for AI operators.
 
 It keeps provider credentials, model metadata, operator notes, and export-ready snippets in a single encrypted `.cvault` file under the operator's control. There is no cloud backend, no telemetry, and no automatic writes into live configs.
 
+**[Explore the read-only browser demo](https://vault.basementboys.org)** — five realistic entries, metadata filters, secret reveal, and deterministic export previews, all using unmistakably fake values. The demo never accepts, uploads, or stores credentials; real vault operations remain desktop-only.
+
 ## Core properties
 
 - Local-first only. No sync service, hosted backend, or remote content.
@@ -52,6 +54,19 @@ CodexVault uses `Tauri + React + TypeScript`.
 The recommended trust path today is still: build from source, review the code, and treat distributed binaries as untrusted until signing and notarization are in place.
 
 ## Demo vault and screenshots
+
+### Browser walkthrough
+
+The hosted walkthrough exercises the real React workflow through a browser-only data adapter. It is intentionally limited to synthetic reads and previews:
+
+- every sample secret includes `not_a_real_key`
+- no create, edit, copy, delete, backup, import, or file-system controls are exposed
+- no account, browser storage, telemetry, or remote data service is used
+- every mutation request is rejected at the adapter boundary
+
+The desktop application continues to use the Tauri adapter for encrypted persistence and operating-system integration. This split keeps the public demo useful without quietly turning CodexVault into a hosted credential manager.
+
+### Encrypted desktop demo vault
 
 CodexVault includes a repeatable demo-vault generator for screenshots, QA, and demos. It writes an encrypted vault containing fake credentials and realistic metadata.
 
@@ -108,7 +123,10 @@ npm test
 npm run test:release-gate
 npm run cargo:test
 npm run tauri:smoke
+npm run build
 ```
+
+The public walkthrough is deployed to Cloudflare with `npm run deploy:cloudflare` after a passing production build.
 
 ### Local packaging
 

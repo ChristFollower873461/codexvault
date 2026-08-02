@@ -7,11 +7,12 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
-  color: #ecf6f8;
+  color: #f1f7f4;
   background:
-    radial-gradient(circle at top left, rgba(127, 240, 200, 0.16), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(34, 97, 120, 0.22), transparent 38%),
-    linear-gradient(180deg, #071015 0%, #09141a 45%, #070d12 100%);
+    linear-gradient(rgba(166, 243, 207, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(166, 243, 207, 0.018) 1px, transparent 1px),
+    #090b0a;
+  background-size: 32px 32px;
 }
 
 a {

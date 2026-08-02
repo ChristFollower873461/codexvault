@@ -300,6 +300,9 @@ const initialFilters: FiltersState = {
   status: 'all',
 }
 
+const sourceUrl = 'https://github.com/ChristFollower873461/codexvault'
+const securityUrl = `${sourceUrl}/blob/main/SECURITY.md`
+
 function App() {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
@@ -327,6 +330,7 @@ function App() {
   const clipboardTimerRef = useRef<number | null>(null)
 
   const session = snapshot?.session ?? null
+  const isDemo = snapshot?.mode === 'demo'
   const entries = session?.entries ?? []
   const isVaultEmpty = entries.length === 0
   const deferredSearch = useDeferredValue(filters.search)
@@ -795,14 +799,48 @@ function App() {
   const revokedCount = entries.filter((entry) => entry.status === 'revoked').length
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${isDemo ? 'demo-shell' : ''}`}>
+      {isDemo ? (
+        <section className="demo-notice" aria-label="Browser demo boundary">
+          <div className="demo-notice-mark" aria-hidden="true">
+            DEMO
+          </div>
+          <div className="demo-notice-copy">
+            <span className="eyebrow">Real workflow · fake keys · nothing saved</span>
+            <strong>Explore the product without trusting the browser with a secret.</strong>
+            <p>
+              Every value on this page is synthetic. The encrypted vault, clipboard
+              controls, and file operations exist only in the desktop app.
+            </p>
+          </div>
+          <div className="demo-notice-actions">
+            <a className="primary-button button-link" href={sourceUrl} target="_blank" rel="noreferrer">
+              View source
+            </a>
+            <a
+              className="ghost-button button-link"
+              href={securityUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Security boundary
+            </a>
+          </div>
+        </section>
+      ) : null}
+
       <header className="topbar panel">
-        <div>
-          <span className="eyebrow">Encrypted local vault</span>
-          <h1>{session.vaultName}</h1>
-          <div className="path-line">
-            <span>Vault file</span>
-            <code>{session.currentPath}</code>
+        <div className="topbar-title">
+          <img src="/favicon.svg" alt="" width="48" height="48" />
+          <div>
+            <span className="eyebrow">
+              {isDemo ? 'Interactive product walkthrough' : 'Encrypted local vault'}
+            </span>
+            <h1>{session.vaultName}</h1>
+            <div className="path-line">
+              <span>{isDemo ? 'Runtime' : 'Vault file'}</span>
+              <code>{session.currentPath}</code>
+            </div>
           </div>
         </div>
 
@@ -821,28 +859,36 @@ function App() {
           </div>
         </div>
 
-        <div className="topbar-actions">
-          <button className="secondary-button" disabled={busy} onClick={handleBackup}>
-            Write encrypted backup
-          </button>
-          <button
-            className="secondary-button"
-            disabled={busy}
-            onClick={() => setShowSettings(true)}
-          >
-            Vault settings
-          </button>
-          <button
-            className="primary-button"
-            disabled={busy}
-            onClick={() => setEditorMode('create')}
-          >
-            New entry
-          </button>
-          <button className="ghost-button" disabled={busy} onClick={() => void handleLock()}>
-            Lock vault
-          </button>
-        </div>
+        {isDemo ? (
+          <div className="topbar-actions demo-readonly-state">
+            <span aria-hidden="true">●</span>
+            <strong>Read-only sample</strong>
+            <small>No account · no storage · no telemetry</small>
+          </div>
+        ) : (
+          <div className="topbar-actions">
+            <button className="secondary-button" disabled={busy} onClick={handleBackup}>
+              Write encrypted backup
+            </button>
+            <button
+              className="secondary-button"
+              disabled={busy}
+              onClick={() => setShowSettings(true)}
+            >
+              Vault settings
+            </button>
+            <button
+              className="primary-button"
+              disabled={busy}
+              onClick={() => setEditorMode('create')}
+            >
+              New entry
+            </button>
+            <button className="ghost-button" disabled={busy} onClick={() => void handleLock()}>
+              Lock vault
+            </button>
+          </div>
+        )}
       </header>
 
       {error ? (
@@ -987,7 +1033,7 @@ function App() {
                     : `${entries.length} entries`}
               </h2>
             </div>
-            {selectedEntryDetails ? (
+            {selectedEntryDetails && !isDemo ? (
               <button
                 className="secondary-button"
                 onClick={() => setEditorMode('edit')}
@@ -1110,15 +1156,17 @@ function App() {
               </div>
 
               <div className="details-actions">
+                {!isDemo ? (
+                  <button
+                    className="primary-button"
+                    disabled={busy}
+                    onClick={() => void handleCopySecret(selectedEntryDetails)}
+                  >
+                    Copy secret
+                  </button>
+                ) : null}
                 <button
-                  className="primary-button"
-                  disabled={busy}
-                  onClick={() => void handleCopySecret(selectedEntryDetails)}
-                >
-                  Copy secret
-                </button>
-                <button
-                  className="secondary-button"
+                  className={isDemo ? 'primary-button' : 'secondary-button'}
                   disabled={busy}
                   onClick={() => void handleRevealSecret(selectedEntryDetails)}
                 >
@@ -1126,20 +1174,24 @@ function App() {
                     ? 'Hide secret'
                     : 'Reveal secret'}
                 </button>
-                <button
-                  className="secondary-button"
-                  disabled={busy}
-                  onClick={() => void handleMarkRotated(selectedEntryDetails)}
-                >
-                  Mark rotated
-                </button>
-                <button
-                  className="ghost-button danger-button"
-                  disabled={busy}
-                  onClick={() => void handleDeleteEntry(selectedEntryDetails)}
-                >
-                  Delete
-                </button>
+                {!isDemo ? (
+                  <>
+                    <button
+                      className="secondary-button"
+                      disabled={busy}
+                      onClick={() => void handleMarkRotated(selectedEntryDetails)}
+                    >
+                      Mark rotated
+                    </button>
+                    <button
+                      className="ghost-button danger-button"
+                      disabled={busy}
+                      onClick={() => void handleDeleteEntry(selectedEntryDetails)}
+                    >
+                      Delete
+                    </button>
+                  </>
+                ) : null}
               </div>
 
               <div className="secret-panel">
@@ -1152,9 +1204,9 @@ function App() {
                   </code>
                 </div>
                 <small>
-                  Masked by default. Reveal values auto-hide after{' '}
-                  {session.settings.revealAutoHideSeconds} seconds. Clipboard clears
-                  after {session.settings.clipboardClearSeconds} seconds if unchanged.
+                  {isDemo
+                    ? 'This is an unmistakably fake demonstration value. The browser demo never accepts or persists credentials.'
+                    : `Masked by default. Reveal values auto-hide after ${session.settings.revealAutoHideSeconds} seconds. Clipboard clears after ${session.settings.clipboardClearSeconds} seconds if unchanged.`}
                 </small>
               </div>
 
@@ -1247,12 +1299,12 @@ function App() {
                 <div className="panel-header">
                   <div>
                     <span className="eyebrow">Exports</span>
-                    <h3>Generate real snippets</h3>
+                    <h3>{isDemo ? 'Inspect sample exports' : 'Generate real snippets'}</h3>
                   </div>
                 </div>
                 <p className="panel-note">
-                  OpenClaw exports use deterministic key selection: `active` first, then
-                  `old`, with `revoked` entries excluded from env output.
+                  {isDemo ? 'Sample previews use the same documented selection policy: ' : 'OpenClaw exports use deterministic key selection: '}
+                  `active` first, then `old`, with `revoked` entries excluded from env output.
                 </p>
 
                 <div className="export-target">
@@ -1264,8 +1316,9 @@ function App() {
                         : `${filteredEntries.length} filtered entries`}
                     </strong>
                     <small>
-                      Copy is always explicit. CodexVault never writes into live configs
-                      automatically.
+                      {isDemo
+                        ? 'Preview only. Browser-demo exports contain synthetic values and are never written anywhere.'
+                        : 'Copy is always explicit. CodexVault never writes into live configs automatically.'}
                     </small>
                   </div>
                   <div className="scope-toggle">
@@ -1325,13 +1378,15 @@ function App() {
                         >
                           Preview
                         </button>
-                        <button
-                          className="primary-button"
-                          disabled={busy || exportIds.length === 0}
-                          onClick={() => void handleCopyExport(option.format)}
-                        >
-                          Copy
-                        </button>
+                        {!isDemo ? (
+                          <button
+                            className="primary-button"
+                            disabled={busy || exportIds.length === 0}
+                            onClick={() => void handleCopyExport(option.format)}
+                          >
+                            Copy
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -1357,15 +1412,16 @@ function App() {
                     </div>
                     <pre>{exportPreview.content}</pre>
                     <small>
-                      Plaintext previews auto-clear after{' '}
-                      {session.settings.revealAutoHideSeconds} seconds or when the
-                      window loses focus.
+                      {isDemo
+                        ? 'Synthetic sample only. Nothing is accepted, uploaded, or retained by this browser demo.'
+                        : `Plaintext previews auto-clear after ${session.settings.revealAutoHideSeconds} seconds or when the window loses focus.`}
                     </small>
                   </div>
                 ) : (
                   <div className="empty-callout">
-                    Nothing is exported automatically. Preview or copy a format when
-                    you need it.
+                    {isDemo
+                      ? 'Choose Preview to inspect a safe, synthetic export.'
+                      : 'Nothing is exported automatically. Preview or copy a format when you need it.'}
                   </div>
                 )}
               </div>
@@ -1374,7 +1430,7 @@ function App() {
         </section>
       </div>
 
-      {editorMode ? (
+      {editorMode && !isDemo ? (
         <EntryEditorModal
           key={
             editorMode === 'edit'
@@ -1388,7 +1444,7 @@ function App() {
         />
       ) : null}
 
-      {showSettings ? (
+      {showSettings && !isDemo ? (
         <SettingsModal
           onClose={() => setShowSettings(false)}
           onSave={handleSaveSettings}
