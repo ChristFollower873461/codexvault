@@ -24,15 +24,18 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.0.2
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.4.0
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust 1.94.0
+        run: |
+          rustup toolchain install 1.94.0 --profile minimal
+          rustup default 1.94.0
 
       - name: Install dependencies
         run: npm ci
@@ -126,7 +129,7 @@ jobs:
           }
           EOF
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codexvault-release-macos
           path: release-artifacts/upload/macos
@@ -135,15 +138,19 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.0.2
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.4.0
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust 1.94.0
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.94.0 --profile minimal
+          rustup default 1.94.0
 
       - name: Install dependencies
         run: npm ci
@@ -247,7 +254,7 @@ jobs:
           }
           $metadata | ConvertTo-Json -Depth 5 | Set-Content "release-artifacts/upload/windows/windows.json"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codexvault-release-windows
           path: release-artifacts/upload/windows
@@ -258,13 +265,13 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.0.2
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.4.0
         with:
           node-version: "22"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: codexvault-release-*
           path: release-artifacts/input
@@ -282,7 +289,7 @@ jobs:
             --input-dir release-artifacts/input \
             --output release-artifacts/output/SHA256SUMS
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codexvault-release-truth
           path: release-artifacts/output
