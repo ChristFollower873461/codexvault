@@ -10,7 +10,7 @@
     "deploy:cloudflare": "npm run build && wrangler deploy",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run && node --test scripts/verify-social-metadata.mjs",
+    "test": "vitest run && node --test scripts/verify-social-metadata.mjs scripts/verify-visit-safety.mjs",
     "test:release-gate": "vitest run src/App.release-gate.test.tsx",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
