@@ -1,6 +1,6 @@
 use tauri::{AppHandle, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 use crate::{
     crypto::default_kdf_metadata,
@@ -43,9 +43,8 @@ pub fn create_vault(
         settings: VaultSettings::default(),
         entries: vec![],
     };
-    let mut password = password;
-    let key = crate::crypto::derive_key_from_password(&password, &kdf)?;
-    password.zeroize();
+    let password = Zeroizing::new(password);
+    let key = crate::crypto::derive_key_from_password(password.as_str(), &kdf)?;
     save_payload(&vault_path, &payload, key.as_slice(), &kdf)?;
 
     state.replace_session(VaultSession {
@@ -71,9 +70,8 @@ pub fn unlock_vault(
     }
 
     let vault_path = normalize_vault_path(&path);
-    let mut password = password;
-    let (payload, kdf, key) = open_vault(&vault_path, &password)?;
-    password.zeroize();
+    let password = Zeroizing::new(password);
+    let (payload, kdf, key) = open_vault(&vault_path, password.as_str())?;
     state.replace_session(VaultSession {
         vault_path: vault_path.clone(),
         kdf,

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 use crate::{
     crypto::{default_kdf_metadata, derive_key_from_password},
@@ -14,9 +14,9 @@ pub fn write_demo_vault(path: &Path, password: &str) -> Result<PathBuf, String> 
     }
 
     let kdf = default_kdf_metadata();
-    let mut password = password.to_string();
-    let key = derive_key_from_password(&password, &kdf).map_err(|error| error.to_string())?;
-    password.zeroize();
+    let password = Zeroizing::new(password.to_string());
+    let key = derive_key_from_password(password.as_str(), &kdf)
+        .map_err(|error| error.to_string())?;
 
     let normalized_path = normalize_vault_path(&path.to_string_lossy());
     let payload = demo_payload();

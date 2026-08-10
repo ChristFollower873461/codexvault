@@ -37,6 +37,9 @@ CodexVault is designed for this shape of problem:
 - `AES-256-GCM` with a fresh nonce on every save
 - Full-payload encryption, not field-level “secret only” encryption
 - Authenticated metadata binding for format, version, KDF metadata, and cipher algorithm
+- Bounded vault-file size and KDF parameters before expensive parsing or password derivation
+- Strict nonce and salt length validation for untrusted `.cvault` files
+- Best-effort zeroization for master-password and decrypted-payload buffers, including error paths
 - Atomic encrypted writes to disk
 - Explicit reveal actions for secrets
 - Plaintext reveal and export previews auto-clear from the UI after a timeout and on window blur

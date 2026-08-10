@@ -77,7 +77,11 @@ That means tampering with version or KDF metadata is part of the authenticated e
 - `format` must be `codexvault`
 - `version` must be `1`
 - `kdf.algorithm` must be `argon2id`
+- version 1 Argon2 parameters must be exactly 64 MiB memory, 3 iterations, and parallelism 1
+- decoded KDF salts must be exactly 16 bytes
 - `cipher.algorithm` must be `aes-256-gcm`
+- decoded AES-GCM nonces must be exactly 12 bytes
+- the complete encrypted envelope must be 16 MiB or smaller
 
 If any of those fields do not match, the file is rejected as unsupported.
 

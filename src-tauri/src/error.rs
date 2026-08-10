@@ -15,6 +15,8 @@ pub enum AppError {
     UnlockFailed,
     #[error("The selected file is not a supported CodexVault vault.")]
     UnsupportedVaultFormat,
+    #[error("The selected vault exceeds the 16 MiB safety limit.")]
+    VaultTooLarge,
     #[error("The vault file could not be read or written.")]
     Io {
         #[source]
