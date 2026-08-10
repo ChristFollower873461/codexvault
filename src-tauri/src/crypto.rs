@@ -164,6 +164,8 @@ fn aad_bytes(kdf: &KdfMetadata) -> AppResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use base64::{engine::general_purpose::STANDARD, Engine};
+    use rand::{rngs::OsRng, RngCore};
+    use zeroize::Zeroizing;
 
     use crate::{
         error::AppError,
@@ -261,7 +263,8 @@ mod tests {
             entries: vec![],
         };
         let kdf = default_kdf_metadata();
-        let key = derive_key_from_password("correct horse battery staple", &kdf).unwrap();
+        let mut key = Zeroizing::new(vec![0_u8; super::KEY_LEN]);
+        OsRng.fill_bytes(key.as_mut_slice());
         let mut envelope = encrypt_payload(&payload, key.as_slice(), &kdf).unwrap();
         envelope.cipher.nonce_b64 = STANDARD.encode([0_u8; 11]);
 
