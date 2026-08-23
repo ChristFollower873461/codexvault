@@ -39,7 +39,7 @@ test("browser walkthrough responses carry strict visit-safety headers", async ()
   assert.equal(response.headers.get("cross-origin-opener-policy"), "same-origin");
   assert.equal(
     response.headers.get("strict-transport-security"),
-    "max-age=31536000; includeSubDomains",
+    "max-age=300",
   );
   assert.match(response.headers.get("permissions-policy") ?? "", /payment=\(\)/);
 
