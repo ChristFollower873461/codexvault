@@ -4,6 +4,20 @@ CodexVault is a local-first single-user desktop vault. Its job is to protect vau
 
 It is not trying to be enterprise secret distribution, host-compromise protection, or forensic-resistant local storage.
 
+## Browser walkthrough boundary
+
+The public site at `https://vault.basementboys.org` is a read-only product
+walkthrough with fake sample credentials. It has no desktop bridge, backend,
+account, telemetry, persistence, payment, upload, or public mutation endpoint.
+Do not enter real credentials into the browser walkthrough.
+
+- Production HTTP redirects to HTTPS.
+- Browser responses set CSP without `unsafe-inline` or `unsafe-eval`, plus HSTS,
+  frame, content-type, referrer, opener, and permissions protections.
+- The Cloudflare Worker can serve only the bundled static assets.
+- The walkthrough has no remote content dependency and links externally only to
+  the public source and Tauri documentation over HTTPS.
+
 ## Threat model
 
 CodexVault is designed for this shape of problem:
@@ -79,7 +93,9 @@ The secret-entry form no longer keeps the secret field in React-managed form sta
 
 ## Reporting issues
 
-If you discover a security issue, report it privately before opening a public issue if possible. Include:
+If you discover a security issue, use
+[GitHub private vulnerability reporting](https://github.com/ChristFollower873461/codexvault/security/advisories/new)
+before opening a public issue. Include:
 
 - affected version or commit
 - reproduction steps

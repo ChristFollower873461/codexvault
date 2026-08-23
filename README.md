@@ -66,6 +66,11 @@ The hosted walkthrough exercises the real React workflow through a browser-only 
 - no account, browser storage, telemetry, or remote data service is used
 - every mutation request is rejected at the adapter boundary
 
+Production redirects to HTTPS and applies the strict browser protections
+documented in [`SECURITY.md`](SECURITY.md). The normal test suite verifies both
+the redirect and those response headers. Do not enter real credentials into
+the browser walkthrough.
+
 The desktop application continues to use the Tauri adapter for encrypted persistence and operating-system integration. This split keeps the public demo useful without quietly turning CodexVault into a hosted credential manager.
 
 ### Encrypted desktop demo vault
