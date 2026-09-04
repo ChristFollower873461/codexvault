@@ -1,7 +1,9 @@
 import {
   startTransition,
+  useCallback,
   useDeferredValue,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react'
@@ -328,6 +330,15 @@ function App() {
     null,
   )
   const clipboardTimerRef = useRef<number | null>(null)
+  const sensitiveUiGenerationRef = useRef(0)
+
+  const clearSensitiveUiState = useCallback(() => {
+    // Invalidate in-flight reads as well as clearing values already rendered.
+    sensitiveUiGenerationRef.current += 1
+    setRevealedSecret(null)
+    setExportPreview(null)
+    setOpenClawReview(null)
+  }, [])
 
   const session = snapshot?.session ?? null
   const isDemo = snapshot?.mode === 'demo'
@@ -356,27 +367,30 @@ function App() {
         : []
   const exportTargetKey = `${effectiveExportScope}:${exportIds.join(',')}`
 
-  function applySnapshot(nextSnapshot: AppSnapshot) {
+  useLayoutEffect(() => {
+    // Deferred search can change the effective target after its input event.
+    // Clear plaintext before the new target paints, even if a read just finished.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    clearSensitiveUiState()
+  }, [exportTargetKey, clearSensitiveUiState])
+
+  const applySnapshot = useCallback((nextSnapshot: AppSnapshot) => {
     setSelectedEntryId((current) => {
       const nextEntries = nextSnapshot.session?.entries ?? []
       return nextEntries.some((entry) => entry.id === current)
         ? current
         : nextEntries[0]?.id ?? null
     })
-    setRevealedSecret(null)
-    setExportPreview(null)
-    setOpenClawReview(null)
+    clearSensitiveUiState()
     startTransition(() => {
       setSnapshot(nextSnapshot)
     })
-  }
+  }, [clearSensitiveUiState])
 
   function updateFilters(updater: (current: FiltersState) => FiltersState) {
     setFilters(updater)
     setSelectedEntryId(null)
-    setRevealedSecret(null)
-    setExportPreview(null)
-    setOpenClawReview(null)
+    clearSensitiveUiState()
   }
 
   function clearFilters() {
@@ -414,7 +428,7 @@ function App() {
         setLoading(false)
       }
     })()
-  }, [])
+  }, [applySnapshot])
 
   useEffect(() => {
     if (!flash) {
@@ -465,12 +479,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const clearSensitiveUiState = () => {
-      setRevealedSecret(null)
-      setExportPreview(null)
-      setOpenClawReview(null)
-    }
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         clearSensitiveUiState()
@@ -481,22 +489,22 @@ function App() {
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
+      sensitiveUiGenerationRef.current += 1
       window.removeEventListener('blur', clearSensitiveUiState)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [])
+  }, [clearSensitiveUiState])
 
   async function handleLock() {
     if (!session) {
       return
     }
 
+    clearSensitiveUiState()
     try {
       const nextSnapshot = await vaultApi.lockVault()
       applySnapshot(nextSnapshot)
       setPendingVaultPath(session.currentPath)
-      setRevealedSecret(null)
-      setExportPreview(null)
       setFlash('Vault locked.')
     } catch (lockError) {
       setError(errorMessage(lockError))
@@ -620,12 +628,13 @@ function App() {
 
   async function handleRevealSecret(entry: VaultEntryRecord) {
     if (revealedSecret?.entryId === entry.id) {
-      setRevealedSecret(null)
+      clearSensitiveUiState()
       return
     }
 
+    const generation = sensitiveUiGenerationRef.current
     const secret = await perform(() => vaultApi.revealSecret(entry.id))
-    if (typeof secret !== 'string') {
+    if (typeof secret !== 'string' || generation !== sensitiveUiGenerationRef.current) {
       return
     }
 
@@ -676,10 +685,11 @@ function App() {
   }
 
   async function openOpenClawReview(targetFormat: 'openClaw' | 'openClawBundle') {
+    const generation = sensitiveUiGenerationRef.current
     const reportContent = await perform(() =>
       vaultApi.previewExport(exportIds, 'openClawBundle'),
     )
-    if (typeof reportContent !== 'string') {
+    if (typeof reportContent !== 'string' || generation !== sensitiveUiGenerationRef.current) {
       return
     }
 
@@ -698,8 +708,9 @@ function App() {
   }
 
   async function handlePreviewExport(format: ExportFormat) {
+    const generation = sensitiveUiGenerationRef.current
     const content = await perform(() => vaultApi.previewExport(exportIds, format))
-    if (typeof content !== 'string') {
+    if (typeof content !== 'string' || generation !== sensitiveUiGenerationRef.current) {
       return
     }
 
@@ -1068,9 +1079,7 @@ function App() {
                   }`}
                   onClick={() => {
                     setSelectedEntryId(entry.id)
-                    setRevealedSecret(null)
-                    setExportPreview(null)
-                    setOpenClawReview(null)
+                    clearSensitiveUiState()
                   }}
                 >
                   <div className="entry-card-header">
@@ -1321,8 +1330,7 @@ function App() {
                       disabled={busy}
                       onClick={() => {
                         setExportScope('selected')
-                        setExportPreview(null)
-                        setOpenClawReview(null)
+                        clearSensitiveUiState()
                       }}
                     >
                       Selected entry
@@ -1336,8 +1344,7 @@ function App() {
                       disabled={busy || filteredEntries.length === 0}
                       onClick={() => {
                         setExportScope('filtered')
-                        setExportPreview(null)
-                        setOpenClawReview(null)
+                        clearSensitiveUiState()
                       }}
                     >
                       Filtered set ({filteredEntries.length})
@@ -1397,7 +1404,7 @@ function App() {
                       </div>
                       <button
                         className="ghost-button"
-                        onClick={() => setExportPreview(null)}
+                        onClick={clearSensitiveUiState}
                       >
                         Clear preview
                       </button>
@@ -1452,7 +1459,7 @@ function App() {
                 <span className="eyebrow">OpenClaw</span>
                 <h2>Selection report</h2>
               </div>
-              <button className="ghost-button" onClick={() => setOpenClawReview(null)}>
+              <button className="ghost-button" onClick={clearSensitiveUiState}>
                 Close
               </button>
             </div>
@@ -1533,7 +1540,7 @@ function App() {
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => setOpenClawReview(null)}
+                onClick={clearSensitiveUiState}
               >
                 Cancel
               </button>
