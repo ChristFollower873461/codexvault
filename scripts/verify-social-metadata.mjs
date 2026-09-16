@@ -55,6 +55,17 @@ test('ships correctly sized, bounded raster sharing assets', () => {
   assert.deepEqual(pngDimensions('public/apple-touch-icon.png'), { width: 180, height: 180 })
 })
 
-test('serves an explicit permissive robots policy', () => {
-  assert.equal(readProjectFile('public/robots.txt').toString('utf8'), 'User-agent: *\nAllow: /\n')
+test('robots permits public search and retrieval but denies dedicated training', () => {
+  const trainingTokens = [
+    'GPTBot', 'ClaudeBot', 'CCBot', 'Bytespider', 'Google-Extended',
+    'Applebot-Extended', 'Amazonbot', 'meta-externalagent',
+  ]
+  // Pin the complete static policy so no extra group can override public access
+  // and no sitemap is advertised for an endpoint this demo does not publish.
+  const expected = [
+    'User-agent: *\nAllow: /\nContent-Signal: search=yes,ai-input=yes,ai-train=no',
+    ...trainingTokens.map((token) => `User-agent: ${token}\nDisallow: /`),
+  ].join('\n\n') + '\n'
+
+  assert.equal(readProjectFile('public/robots.txt').toString('utf8'), expected)
 })
