@@ -55,13 +55,25 @@ const metadata = metadataFiles.map((fileName) =>
 )
 const macos = metadata.find((entry) => entry.platform === 'macos')
 const windows = metadata.find((entry) => entry.platform === 'windows')
-const checks = {
-  macosSigned: Boolean(macos?.signed),
-  macosNotarized: Boolean(macos?.notarized),
-  windowsSigned: Boolean(windows?.signed),
+const failures = []
+
+function readTrustFlag(entry, field, platform) {
+  if (!entry) {
+    return false
+  }
+  if (typeof entry[field] !== 'boolean') {
+    failures.push(`${platform} metadata field "${field}" must be a boolean.`)
+    return false
+  }
+  return entry[field]
 }
 
-const failures = []
+const checks = {
+  macosSigned: readTrustFlag(macos, 'signed', 'macOS'),
+  macosNotarized: readTrustFlag(macos, 'notarized', 'macOS'),
+  windowsSigned: readTrustFlag(windows, 'signed', 'Windows'),
+}
+
 if (!macos) {
   failures.push('Missing macOS metadata file.')
 }
