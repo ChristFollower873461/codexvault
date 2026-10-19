@@ -7,7 +7,7 @@ import { EntryEditorModal } from './EntryEditorModal'
 describe('EntryEditorModal', () => {
   it('requires a secret for new entries without storing it in form state', async () => {
     const user = userEvent.setup()
-    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    const onSubmit = vi.fn().mockResolvedValue(true)
 
     render(
       <EntryEditorModal
@@ -48,11 +48,12 @@ describe('EntryEditorModal', () => {
         status: 'active',
       }),
     )
+    await waitFor(() => expect(secretInput).toHaveValue(''))
   })
 
   it('leaves the secret unchanged on edit when the replacement field is blank', async () => {
     const user = userEvent.setup()
-    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    const onSubmit = vi.fn().mockResolvedValue(true)
 
     render(
       <EntryEditorModal
@@ -100,5 +101,36 @@ describe('EntryEditorModal', () => {
         status: 'active',
       }),
     )
+  })
+
+  it.each(['false', 'rejection'])('retains a draft after %s until a save is acknowledged', async (failure) => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    if (failure === 'false') {
+      onSubmit.mockResolvedValueOnce(false)
+    } else {
+      onSubmit.mockRejectedValueOnce(new Error('Synthetic save failure'))
+    }
+    onSubmit.mockResolvedValueOnce(true)
+
+    render(
+      <EntryEditorModal mode="create" entry={null} onClose={() => {}} onSubmit={onSubmit} />,
+    )
+
+    await user.type(screen.getByLabelText('Name'), 'Synthetic retry entry')
+    await user.type(screen.getByLabelText('Provider'), 'Synthetic provider')
+    await user.type(screen.getByLabelText('Env var name'), 'SYNTHETIC_API_KEY')
+    const secretInput = screen.getByLabelText('Secret value')
+    await user.type(secretInput, 'synthetic_not_a_real_key')
+    await user.click(screen.getByRole('button', { name: 'Add entry' }))
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(secretInput).toHaveValue('synthetic_not_a_real_key')
+    expect(screen.getByLabelText('Name')).toHaveValue('Synthetic retry entry')
+
+    await user.click(screen.getByRole('button', { name: 'Add entry' }))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2))
+    expect(onSubmit.mock.calls[1][0]).toEqual(onSubmit.mock.calls[0][0])
+    await waitFor(() => expect(secretInput).toHaveValue(''))
   })
 })

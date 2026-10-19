@@ -28,7 +28,7 @@ interface EntryEditorModalProps {
   mode: 'create' | 'edit'
   entry: VaultEntryRecord | null
   onClose: () => void
-  onSubmit: (input: EntryUpsertInput) => Promise<void>
+  onSubmit: (input: EntryUpsertInput) => Promise<boolean>
 }
 
 function splitCsv(input: string | undefined) {
@@ -82,7 +82,7 @@ export function EntryEditorModal({
       return
     }
 
-    await onSubmit({
+    const saved = await onSubmit({
       id: entry?.id,
       name: values.name.trim(),
       provider: values.provider.trim(),
@@ -95,9 +95,10 @@ export function EntryEditorModal({
       environment: values.environment?.trim() ?? '',
       agentAccessTags: splitCsv(values.agentAccessTags),
       status: values.status,
-    })
+    }).catch(() => false)
 
-    if (secretValueRef.current) {
+    // The caller reports save errors; only acknowledged success discards the draft.
+    if (saved === true && secretValueRef.current) {
       secretValueRef.current.value = ''
     }
   }

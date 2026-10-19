@@ -587,15 +587,16 @@ function App() {
     return true
   }
 
-  async function handleEntrySubmit(input: EntryUpsertInput) {
+  async function handleEntrySubmit(input: EntryUpsertInput): Promise<boolean> {
     const nextSnapshot = await perform(() => vaultApi.upsertEntry(input))
     if (!nextSnapshot) {
-      return
+      return false
     }
 
     applySnapshot(nextSnapshot)
     setEditorMode(null)
     setFlash(input.id ? 'Entry updated.' : 'Entry added.')
+    return true
   }
 
   async function handleDeleteEntry(entry: VaultEntryRecord) {
